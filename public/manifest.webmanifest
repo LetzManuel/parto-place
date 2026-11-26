@@ -1,0 +1,16 @@
+{
+  "name": "Parto Place",
+  "short_name": "Place",
+  "description": "Alle Geräte zuhause in einer App: Alles ok? und Alles aus.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FFF7EE",
+  "theme_color": "#FFF7EE",
+  "icons": [
+    { "src": "brand/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "brand/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
