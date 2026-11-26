@@ -2,11 +2,12 @@ import { useRef, useState } from 'react';
 import type { Device, DeviceKind, DeviceState, Vendor } from '../core/model';
 import { VENDOR_REACH } from '../core/model';
 import { ageMinutes } from '../core/status';
+import { ServerClient } from '../adapters/server';
 import { Icon, type IconName } from './icons';
 import type { HomeApi } from './useHome';
 
 function ageText(observedAt: string | undefined, now: Date): string {
-  if (!observedAt) return 'kein Stand';
+  if (!observedAt) return 'unbekannt';
   const m = ageMinutes(observedAt, now);
   return m === 0 ? 'gerade eben' : `vor ${m} Min.`;
 }
@@ -20,6 +21,12 @@ export function HomeScreen({ api }: { api: HomeApi }) {
   const infos = status.issues.filter((i) => i.level === 'info' && !i.fix);
   return (
     <section className="screen">
+      {api.serverError && (
+        <p className="error-text" role="alert">Server nicht erreichbar: {api.serverError}. Der angezeigte Stand kann veraltet sein.</p>
+      )}
+      {api.mode === 'server' && home.devices.length === 0 && !api.serverError && (
+        <p className="hint">Noch keine Geräte. Verbinde unter „Mehr“ deine erste Marke.</p>
+      )}
       <div className={`status-card ${status.ok ? 'is-ok' : 'is-open'}`} role="status">
         <div className="status-icon">
           <Icon name={status.ok ? 'check' : 'alert'} size={40} />
@@ -238,46 +245,198 @@ export function UnlockSheet({ device, api, onClose }: { device: Device; api: Hom
 
 /* ---------- Mehr ---------- */
 
-const vendors: { id: Vendor; name: string; how: string }[] = [
+const vendorInfo: { id: Vendor; name: string; how: string }[] = [
   { id: 'nuki', name: 'Nuki', how: 'API-Token aus web.nuki.io' },
-  { id: 'bosch', name: 'Bosch Smart Home', how: 'Controller im WLAN koppeln' },
-  { id: 'somfy', name: 'Somfy TaHoma', how: 'Developer Mode, Token im WLAN' },
-  { id: 'velux', name: 'Velux', how: 'über Apple Home (iPhone/iPad)' },
   { id: 'lg', name: 'LG ThinQ', how: 'persönlicher Zugriffstoken' },
   { id: 'spotify', name: 'Spotify', how: 'Spotify-Anmeldung (Premium)' },
+  { id: 'bosch', name: 'Bosch Smart Home', how: 'kommt mit der App für zuhause' },
+  { id: 'somfy', name: 'Somfy TaHoma', how: 'kommt mit der App für zuhause' },
+  { id: 'velux', name: 'Velux', how: 'kommt mit der App für zuhause (Apple Home)' },
 ];
 
+function defaultServerUrl(): string {
+  const { origin, hostname } = window.location;
+  return hostname.endsWith('parto.at') ? origin : 'https://place.parto.at';
+}
+
 export function MoreScreen({ api }: { api: HomeApi }) {
-  const { home, adapter, refresh, reset } = api;
+  return (
+    <section className="screen">
+      <h1 className="screen-title">Mehr</h1>
+      <ServerSection api={api} />
+      {api.mode === 'server' ? <ConnectionsSection api={api} /> : <DemoSection api={api} />}
+      {api.mode === 'server' && api.home.devices.length > 0 && <RoomsSection api={api} />}
+    </section>
+  );
+}
+
+function ServerSection({ api }: { api: HomeApi }) {
+  const [url, setUrl] = useState(defaultServerUrl);
+  const [key, setKey] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  if (api.settings) {
+    return (
+      <div className="panel">
+        <h2 className="section-title">Server</h2>
+        <p className="hint">
+          Verbunden mit {api.settings.url || 'diesem Server'}. {api.serverError ? `Problem: ${api.serverError}` : ''}
+        </p>
+        <button className="pill pill-quiet" onClick={() => api.setSettings(null)}>Abmelden und Demo zeigen</button>
+      </div>
+    );
+  }
+
+  const connect = async () => {
+    setChecking(true);
+    setMsg(null);
+    try {
+      await new ServerClient({ url, appKey: key.trim() }).status();
+      api.setSettings({ url, appKey: key.trim() });
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <form className="panel" onSubmit={(e) => { e.preventDefault(); void connect(); }}>
+      <h2 className="section-title">Mein Zuhause verbinden</h2>
+      <p className="hint">Gerade siehst du die Demo. Mit deinem Server auf parto.at siehst du deine echten Geräte.</p>
+      <label className="field">
+        <span>Server-Adresse</span>
+        <input value={url} onChange={(e) => setUrl(e.target.value)} inputMode="url" autoComplete="off" />
+      </label>
+      <label className="field">
+        <span>App-Schlüssel</span>
+        <input value={key} onChange={(e) => setKey(e.target.value)} type="password" autoComplete="off" />
+      </label>
+      {msg && <p className="error-text" role="alert">{msg}</p>}
+      <button className="pill" disabled={checking || key.trim() === ''}>{checking ? 'Prüfe …' : 'Verbinden'}</button>
+    </form>
+  );
+}
+
+function ConnectionsSection({ api }: { api: HomeApi }) {
+  const linkFor = (v: Vendor) => api.links.find((l) => l.vendor === v);
+  const [open, setOpen] = useState<Vendor | null>(null);
+  const spotifyResult = window.location.hash.includes('spotify=ok') ? 'Spotify ist verbunden.' : window.location.hash.includes('spotify=fehler') ? 'Spotify konnte nicht verbunden werden. Bitte nochmal versuchen.' : null;
+
+  return (
+    <div className="panel">
+      <h2 className="section-title">Verbindungen</h2>
+      {spotifyResult && <p className="hint" role="status">{spotifyResult}</p>}
+      <ul className="vendor-list">
+        {vendorInfo.map((v) => {
+          const link = linkFor(v.id);
+          const cloud = VENDOR_REACH[v.id] === 'cloud';
+          return (
+            <li key={v.id} className="vendor-item">
+              <div className="vendor-row">
+                <span className="device-icon"><Icon name={cloud ? 'cloud' : 'wifi'} /></span>
+                <div className="device-text">
+                  <strong>{v.name}</strong>
+                  <span>{link ? (link.status === 'ok' ? 'Verbunden' : link.error || 'Fehler') : v.how}</span>
+                </div>
+                {cloud && !link && (
+                  <button className="pill pill-small" onClick={() => setOpen(open === v.id ? null : v.id)}>Verbinden</button>
+                )}
+                {link && (
+                  <button className="pill pill-small pill-quiet" onClick={() => void api.client!.disconnect(v.id).then(() => api.refresh())}>Trennen</button>
+                )}
+                {!cloud && <span className="badge">bald</span>}
+              </div>
+              {open === v.id && <ConnectForm vendor={v.id} api={api} onDone={() => setOpen(null)} />}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function ConnectForm({ vendor, api, onDone }: { vendor: Vendor; api: HomeApi; onDone: () => void }) {
+  const [value, setValue] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+  const label = vendor === 'spotify' ? 'Spotify Client ID' : vendor === 'lg' ? 'Persönlicher Zugriffstoken (PAT)' : 'Nuki API-Token';
+
+  const submit = async () => {
+    setWorking(true);
+    setMsg(null);
+    try {
+      if (vendor === 'spotify') {
+        window.location.href = await api.client!.startSpotify(value.trim());
+        return;
+      }
+      const r = await api.client!.connectToken(vendor as 'nuki' | 'lg', value.trim(), vendor === 'lg' ? 'AT' : undefined);
+      setValue('');
+      await api.refresh();
+      setMsg(`${r.devices} Gerät(e) gefunden.`);
+      setTimeout(onDone, 1500);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  return (
+    <form className="connect-form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+      <label className="field">
+        <span>{label}</span>
+        <input value={value} onChange={(e) => setValue(e.target.value)} type={vendor === 'spotify' ? 'text' : 'password'} autoComplete="off" />
+      </label>
+      <p className="hint">Wird verschlüsselt auf deinem Server gespeichert und nie wieder angezeigt.</p>
+      {msg && <p className="hint" role="status">{msg}</p>}
+      <button className="pill pill-small" disabled={working || value.trim() === ''}>{working ? 'Verbinde …' : vendor === 'spotify' ? 'Bei Spotify anmelden' : 'Speichern'}</button>
+    </form>
+  );
+}
+
+function RoomsSection({ api }: { api: HomeApi }) {
+  return (
+    <div className="panel">
+      <h2 className="section-title">Räume</h2>
+      <p className="hint">Ordne jedes Gerät einem Raum zu. Leer lassen für „Ohne Raum“.</p>
+      <ul className="vendor-list">
+        {api.home.devices.map((d) => (
+          <li key={d.id}>
+            <div className="device-text"><strong>{d.name}</strong></div>
+            <input
+              className="room-input"
+              aria-label={`Raum für ${d.name}`}
+              defaultValue={d.roomId === 'Ohne Raum' ? '' : d.roomId}
+              placeholder="Raum"
+              onBlur={(e) => {
+                const room = e.target.value.trim();
+                if (room !== (d.roomId === 'Ohne Raum' ? '' : d.roomId)) void api.client!.setRoom(d.id, room).then(() => api.refresh());
+              }}
+            />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function DemoSection({ api }: { api: HomeApi }) {
   const [offline, setOffline] = useState<Set<string>>(new Set());
   const toggleOffline = (id: string) => {
     const next = new Set(offline);
     if (next.has(id)) next.delete(id); else next.add(id);
-    adapter.setOffline(id, next.has(id));
+    api.demoAdapter.setOffline(id, next.has(id));
     setOffline(next);
-    void refresh();
+    void api.refresh();
   };
   return (
-    <section className="screen">
-      <h1 className="screen-title">Mehr</h1>
-      <h2 className="section-title">Verbindungen</h2>
-      <ul className="vendor-list">
-        {vendors.map((v) => (
-          <li key={v.id}>
-            <span className="device-icon"><Icon name={VENDOR_REACH[v.id] === 'cloud' ? 'cloud' : 'wifi'} /></span>
-            <div className="device-text">
-              <strong>{v.name}</strong>
-              <span>{VENDOR_REACH[v.id] === 'cloud' ? 'Cloud, überall' : 'nur im WLAN zuhause'} · {v.how}</span>
-            </div>
-            <span className="badge">bald</span>
-          </li>
-        ))}
-      </ul>
-
+    <div className="panel">
       <h2 className="section-title">Demo</h2>
       <p className="hint">Alle Geräte hier sind erfunden. Zum Ausprobieren kannst du einzelne Geräte „offline“ schalten.</p>
       <ul className="vendor-list">
-        {home.devices.map((d) => (
+        {api.home.devices.map((d) => (
           <li key={d.id}>
             <div className="device-text"><strong>{d.name}</strong></div>
             <button className="switch" role="switch" aria-checked={!offline.has(d.id)} aria-label={`${d.name} erreichbar`} onClick={() => toggleOffline(d.id)}>
@@ -286,7 +445,7 @@ export function MoreScreen({ api }: { api: HomeApi }) {
           </li>
         ))}
       </ul>
-      <button className="pill pill-quiet" onClick={() => { setOffline(new Set()); reset(); }}>Demo zurücksetzen</button>
-    </section>
+      <button className="pill pill-quiet" onClick={() => { setOffline(new Set()); api.resetDemo(); }}>Demo zurücksetzen</button>
+    </div>
   );
 }

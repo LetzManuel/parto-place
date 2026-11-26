@@ -3,3 +3,6 @@ dist
 *.local
 .env*
 *.tsbuildinfo
+release
+server/config.php
+server/db.sqlite

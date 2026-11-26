@@ -2,7 +2,7 @@
 
 One app to see and control every smart-home device of a home: "Alles ok?" at a glance, "Alles aus" in one tap. Part of the Parto private app line.
 
-This first version runs with a **fictional demo home** only. No real devices are connected yet.
+Without a server the app shows a **fictional demo home**. Connected to its server (PHP on parto.at), it shows the real devices.
 
 ## Run
 
@@ -10,8 +10,12 @@ This first version runs with a **fictional demo home** only. No real devices are
 npm install
 npm run dev        # http://localhost:5173
 npm test           # core logic (vitest)
-npm run build      # static files in dist/, e.g. for place.parto.at
+npm run build      # static files in dist/
+npm run test:server  # PHP server tests (php 8.2+ with sodium, pdo_sqlite)
+npm run package    # release/parto-place.zip = server + built app
 ```
+
+Installation on parto.at: [docs/INSTALL-hostprofis.md](docs/INSTALL-hostprofis.md) (German).
 
 ## Structure
 
@@ -19,6 +23,7 @@ npm run build      # static files in dist/, e.g. for place.parto.at
 - `src/adapters/` – one adapter per vendor. Today only `demo.ts` (fictional home).
 - `src/ui/` – React screens: Zuhause, Szenen, Geräte, Mehr.
 - `public/brand/` – Parto Place logo line (logo, mark, app icon; light and dark).
+- `server/` – PHP 8.2+ server for shared hosting: JSON API (`public/api.php`), encrypted vendor tokens in MySQL, cron poller (`cron.php`), adapters for Nuki, LG ThinQ and Spotify. Only `server/public/` is served.
 
 ## Planned connections
 

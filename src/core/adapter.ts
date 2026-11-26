@@ -18,7 +18,7 @@ export interface CommandRequest {
 }
 
 export type CommandResult =
-  | { status: 'done'; state: DeviceState }
+  | { status: 'done'; state?: DeviceState }
   | { status: 'accepted' } // vendor acknowledged, confirmation follows (e.g. Nuki)
   | { status: 'failed'; reason: string };
 

@@ -24,7 +24,7 @@ export function App() {
           <source srcSet="./brand/parto-place-logo-dark.svg" media="(prefers-color-scheme: dark)" />
           <img src="./brand/parto-place-logo-light.svg" alt="parto place" className="logo" />
         </picture>
-        <span className="demo-badge">Demo</span>
+        {api.mode === 'demo' && <span className="demo-badge">Demo</span>}
       </header>
 
       <main>
