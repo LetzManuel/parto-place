@@ -1,0 +1,41 @@
+-- Parto Place server schema (MySQL / MariaDB, utf8mb4)
+CREATE TABLE IF NOT EXISTS vendor_link (
+  vendor VARCHAR(20) NOT NULL PRIMARY KEY,
+  secret TEXT NOT NULL,              -- encrypted with encryption_key (libsodium)
+  status VARCHAR(20) NOT NULL DEFAULT 'ok',
+  error VARCHAR(255) NOT NULL DEFAULT '',
+  updated_at VARCHAR(20) NOT NULL
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS device (
+  id VARCHAR(120) NOT NULL PRIMARY KEY,
+  vendor VARCHAR(20) NOT NULL,
+  kind VARCHAR(20) NOT NULL,
+  name VARCHAR(120) NOT NULL,
+  room VARCHAR(60) NOT NULL DEFAULT '',
+  ref VARCHAR(120) NOT NULL
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS device_state (
+  device_id VARCHAR(120) NOT NULL PRIMARY KEY,
+  vals TEXT NOT NULL,
+  observed_at VARCHAR(20) NOT NULL,
+  source VARCHAR(20) NOT NULL,
+  reachable TINYINT NOT NULL DEFAULT 1
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS home_event (
+  id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  at VARCHAR(20) NOT NULL,
+  device_id VARCHAR(120) NOT NULL,
+  what VARCHAR(40) NOT NULL,
+  how VARCHAR(20) NOT NULL
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS oauth_pending (
+  state VARCHAR(64) NOT NULL PRIMARY KEY,
+  vendor VARCHAR(20) NOT NULL,
+  verifier TEXT NOT NULL,
+  client_id VARCHAR(64) NOT NULL,
+  created_at VARCHAR(20) NOT NULL
+) DEFAULT CHARSET=utf8mb4;
