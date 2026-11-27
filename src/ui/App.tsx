@@ -21,8 +21,8 @@ export function App() {
     <div className="app">
       <header className="top">
         <picture>
-          <source srcSet="./brand/parto-place-logo-dark.svg" media="(prefers-color-scheme: dark)" />
-          <img src="./brand/parto-place-logo-light.svg" alt="parto place" className="logo" />
+          <source srcSet="./brand/parto-place-logo-white.svg" media="(prefers-color-scheme: dark)" />
+          <img src="./brand/parto-place-logo.svg" alt="parto place" className="logo" />
         </picture>
         {api.mode === 'demo' && <span className="demo-badge">Demo</span>}
       </header>
