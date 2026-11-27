@@ -1,13 +1,14 @@
-/* Parto private logo line, Place: teal #1FA58D, plum ink #33244F, cream #FFF7EE, dark #2B1F43 */
+/* Parto private logo line (approved 27 Nov 2026): navy ink #172A4D on white, Place = rose #D9819D (pastel),
+   rose as button/text colour in the darker step #A84A6B (5.4:1 with white). Dark mode on navy. */
 :root {
-  --bg: #fff7ee;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f6ece2;
-  --ink: #33244f;
-  --muted: #6b5e80;
-  --line: #eadfd3;
-  --accent: #1fa58d;          /* fills, large shapes */
-  --accent-strong: #127563;   /* buttons with white text (>= 4.5:1) */
+  --surface-2: #f4f5f8;
+  --ink: #172a4d;
+  --muted: #5b6680;
+  --line: #e3e6ec;
+  --accent: #d9819d;          /* fills, large shapes */
+  --accent-strong: #a84a6b;   /* buttons with white text (>= 4.5:1) */
   --on-accent: #ffffff;
   --ok-bg: #dff3ee;
   --ok-ink: #0f5e50;
@@ -22,15 +23,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #2b1f43;
-    --surface: #382a55;
-    --surface-2: #433364;
-    --ink: #fff7ee;
-    --muted: #cbbfdd;
-    --line: #4d3c70;
-    --accent: #3cc7a9;
-    --accent-strong: #3cc7a9;
-    --on-accent: #10261f;
+    --bg: #172a4d;
+    --surface: #1f3459;
+    --surface-2: #2a4268;
+    --ink: #ffffff;
+    --muted: #c3cbd8;
+    --line: #2a4268;
+    --accent: #efa9bf;
+    --accent-strong: #efa9bf;
+    --on-accent: #172a4d;
     --ok-bg: #1d4a45;
     --ok-ink: #b8f0e2;
     --warn-bg: #5a3a2a;
